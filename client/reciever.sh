@@ -143,10 +143,10 @@ _resp_request(){
         echo "REQUEST ERROR ${DETAILS}";
     ;;
     "session-expired")
-        echo "REQUEST DISCONNECTED";
+        echo "REQUEST EXPIRED";
     ;;
     "session-invalid")
-        echo "REQUEST DISCONNECTED";
+        echo "REQUEST INVALID";
     ;;
     "unknown")
         echo "REQUEST UNRECOGNIZED ${DETAILS}";
@@ -242,7 +242,7 @@ _resp_tvcmd_process(){
         echo "TV_CMD INVALID-CMD ${DETAILS}";
     ;;
     "unknown-error")
-        echo "TV_CMD UNKNOWN ERROR ${DETAILS}";
+        echo "TV_CMD UNKNOWN-ERROR ${DETAILS}";
     ;;
     "success")
         echo "TV_CMD SUCCESS ${DETAILS}";
@@ -311,7 +311,7 @@ process_answer(){
         "TVCMD")
             if ! _resp_tvcmd_process "$( _py_from_get_value "${JSON_STRING}" status )" "$( _py_from_get_value "${JSON_STRING}" details )"; then
                 echoerr "_resp_tvcmd_process returned code $?"
-                return 10
+                return 11
             fi
         ;;
         *)
