@@ -10,13 +10,15 @@ import time
 import threading
 import fileinput
 from enum import Enum
+import json
+import re
 
 HERE_PATH= os.path.abspath(os.path.dirname(sys.argv[0]))
 
 def printForPipe(arg):
     print( arg )
     sys.stdout.flush()
-    time.sleep(1)
+    time.sleep(0.05)
 
 
 class MyGUI(GObject.GObject) :
@@ -27,8 +29,9 @@ class MyGUI(GObject.GObject) :
 
         def onDestroy(self, *args):
             printForPipe("QUIT")
+            time.sleep(1)
             Gtk.main_quit()
-        
+
         def onConnectBtnClick(self, *args):
             if ( ( ( "EntryLogin" in self._objects and self._objects["EntryLogin"] ) and 
             ( "EntryPass" in self._objects and self._objects["EntryPass"] ) ) and
@@ -71,6 +74,19 @@ class MyGUI(GObject.GObject) :
             if show and user:
                 printForPipe("REQUEST "+user+" TVCMD"+" ADD_SHOW "+show)
 
+        def onURL(self, *args):
+            printForPipe("URL_GET")
+
+        def onRegister(self, *args):
+            self._parent.registerDialog()
+
+        def registerEntryCtrl(self, *args):
+            self._objects["RegisterValidButton"].set_sensitive(
+                self._objects['EntryUsername'].get_text() != '' and
+                self._objects['EntryPasswordSet'].get_text() != '' and
+                self._objects['EntryPasswordConfirm'].get_text() == self._objects['EntryPasswordSet'].get_text()
+            )
+
 
 
 
@@ -93,15 +109,20 @@ class MyGUI(GObject.GObject) :
         self._connectedUser= None
 
         self._onFilter= MyGUI.FILTER.ALL
+
+        self._url= None
         
         for name in ['myWindow','EntryLogin','EntryPass','ConnectBtn','Stack','ShowsPage', 'WaitConnectLabel',
-                    'ErrorDialog', 'ValidDialog',
+                    'ErrorDialog', 'ValidDialog', 'URLDialog', 'RegisterDialog',
                     'NewToggle', 'UpcomingToggle', 'SeenToggle', 'AcquiredToggle', 'AllToggle',
-                    'ShowSearchEntry'] :
+                    'ShowSearchEntry', 'EntryURL', 'EntryUsername', 'EntryPasswordSet', 'EntryPasswordConfirm',
+                    'RegisterValidButton', 'ShowsTreeView', 'ShowsTreeStore'] :
             self.objects[name]= self.builder.get_object(name)
 
         self._handler= MyGUI.Handler(self, self.objects)
         self.builder.connect_signals(self._handler)
+
+        self.objects['AllToggle'].set_active(True)
 
 
     def show(self):
@@ -142,6 +163,37 @@ class MyGUI(GObject.GObject) :
     def validDialog(self, status, info=None):
         self._dialog("ValidDialog", status, info)
 
+    def urlDialog(self, url=None):
+        dial= self.objects['URLDialog']
+        urlEntry= self.objects['EntryURL']
+
+        if url :
+            urlEntry.set_text(url)
+
+        response = dial.run()
+
+        if response == Gtk.ResponseType.OK and len(urlEntry.get_text())>0:
+            printForPipe("URL_SET "+urlEntry.get_text())            
+
+        dial.hide()
+
+    def registerDialog(self):
+        dial= self.objects['RegisterDialog']
+        userEntry= self.objects['EntryUsername']
+        pass1Entry= self.objects['EntryPasswordSet']
+        pass2Entry= self.objects['EntryPasswordConfirm']
+
+        userEntry.set_text('')
+        pass1Entry.set_text('')
+        pass2Entry.set_text('')
+
+        response = dial.run()
+
+        if response == Gtk.ResponseType.OK :
+            printForPipe("REGISTER "+userEntry.get_text()+' '+pass1Entry.get_text())            
+
+        dial.hide()
+
     def _filterSearch(self, showName):
         txt= showName.lower().replace(' ','_')
         user= self._connectedUser
@@ -156,6 +208,38 @@ class MyGUI(GObject.GObject) :
                 printForPipe("REQUEST "+user+" TVCMD"+" COMMAND ls -s "+txt+"*")
             elif self._onFilter == MyGUI.FILTER.ACQUIRED:
                 printForPipe("REQUEST "+user+" TVCMD"+" COMMAND ls -a "+txt+"*")
+
+    def _processShowDB(self, show_db):
+        treeStore= self.objects['ShowsTreeStore']
+        treeStore.clear()
+        
+        for show in show_db.keys() :
+            showNode= treeStore.append(None,(show,None,None,None,None,None))
+            for episode in show_db[show] :
+                treeStore.append(showNode,(None,episode[0],episode[1],episode[2],episode[3],episode[4],))
+
+    def processJSONShowList(self, data):
+        obj= json.loads(data)
+        db= {}
+        if obj :
+            if ("invoked" in obj) and (re.match("^\s*COMMAND\s+(ls)(\s+|(\s\S+))*$", obj['invoked'])) :
+                if 'line_count' in obj :
+                    l_count= obj['line_count']
+                    for i_l in range(1, (l_count+1)):
+                        line= obj["line"+str(i_l)]
+                        m= re.match("^\s*(\S+)\.s([0-9]{2})e([0-9]{2})\s+\:\s+\[\s+(\S+)\s+\]\s+\[\s+([0-9]{4}\-[0-9]{2}\-[0-9]{2})\s+\]\s\[\s+(.*)\s+\].*$",
+                                    line)
+                        if m:
+                            m= m.groups()
+                            show= m[0]
+                            #( season, episode, tag, date, name)
+                            ep= ((int(m[1])), (int(m[2])), m[3], m[4], m[5])
+                            if not show in db:
+                                db[show]= []
+                            db[show].append(ep)
+        print("=> "+str(db))
+        if len(db)>0 :
+            self._processShowDB(db)
 
     def input_process(self, s):
         info= s.split(' ')
@@ -228,6 +312,22 @@ class MyGUI(GObject.GObject) :
                     self.errorDialog(('Server PROCESS' if info[0] == "PROCESS" else 'Request PROCESS ') , "Invalid or unknown connexion status")
                 else :
                     self.errorDialog(('Request ' if info[0] == "PROCESS" else 'Request processing ')+status, more)
+        elif info[0] == "GET_URL":
+            if _l>1:
+                status= info[1]
+                more= ' '.join(info[2:]) if _l>2 else None
+                if (status == "FOUND"):
+                    self.urlDialog(more)
+                else:
+                    self.errorDialog('Get URL '+status, more)
+        elif info[0] == "SET_URL":
+            if _l>2:
+                status= info[1]
+                more= ' '.join(info[2:])
+                if (status == "SET"):
+                    self._url= more
+                else:
+                    self.errorDialog('Set URL '+status, more)
         elif info[0] == "TV_CMD":
             if _l>1:
                 status= info[1]
@@ -244,6 +344,11 @@ class MyGUI(GObject.GObject) :
                     self.processJSONShowList(more)
                 else :
                     self.errorDialog('TVCmd: '+status, more)
+        elif info[0] == "QUIT":
+            printForPipe("QUIT")
+            time.sleep(1)
+            Gtk.main_quit()
+
                 
                 
 

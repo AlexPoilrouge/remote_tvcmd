@@ -122,7 +122,7 @@ cmd_request_process(){
                         *)
                             _RET="{\"request\":\"TVCMD\", \"status\":\"success\", \"details\":{"
                             _LINES="$( echo "${_RES}" | ( _I=1; while read -r LINE; do echo -n "\"line${_I}\":\"${LINE}\", "; _I=$(( _I + 1 )); done; echo -n \"line_count\":$(( _I - 1 )) ) )"
-                            _RET="${_RET}${_LINES}}}"
+                            _RET="${_RET}\"invoked\":\"$*\", ${_LINES}}}"
                             
                             echo "${_RET}"
                         ;;

@@ -2,7 +2,10 @@
 
 echoerr() { echo "$@" 1>&2; }
 
-URL="https://alexandre.hurstel.eu/test/index.php"
+SCRIPT_DIR="$( realpath "$( dirname "$0" )" )"
+URL_FILE="${SCRIPT_DIR}/url"
+
+URL="$( cat "${URL_FILE}" )"
 
 _send(){
     if [[ $# -lt 2 ]]; then
@@ -36,7 +39,7 @@ _send(){
         fi
     done
 
-    if curl --silent --data "user=${_USER}" --data "request=${_REQUEST}" --data "pass=${_PASS}" --data "args=${_ARGS}" ${URL}; then
+    if curl --silent --data "user=${_USER}" --data "request=${_REQUEST}" --data "pass=${_PASS}" --data "args=${_ARGS}" "${URL}"; then
         return 0
     else
         echoerr "[send] curl failed"
@@ -115,6 +118,38 @@ _cmd_request(){
     _send "${_USER}" REQUEST "${_TARGET}" "${_CMD}" "$@"
 }
 
+_cmd_url_set(){
+    if [[ $# -lt 1 ]]; then
+        echoerr "[cmd_url_set] no url given…"
+        return 1
+    fi
+
+    _URL="$1"
+    if [[ "${_URL}" =~ ^(https?|ftp|file)://[-A-Za-z0-9\+\&@#/%?=~_|\!:,.\;]*[-A-Za-z0-9\+\&@#/%=~_|]$ ]]; then
+        URL="${_URL}"
+        echo "${_URL}" > "${URL_FILE}"
+        echo "{\"request\":\"set_url\", \"status\":\"done\", \"details\":\"${_URL}\"}"
+        return 0
+    else
+        echoerr "[cmd_url_set] malformed url?"
+        return 5
+    fi
+}
+
+_cmd_url_get(){
+    if [ "${URL}" != "" ]; then
+        echo "{\"request\":\"get_url\", \"status\":\"found\", \"details\":\"${URL}\"}"
+    else
+        echoerr "[cmd_url_get] not url set…"
+        return 6
+    fi
+}
+
+quit_cmd(){
+    echo "{\"request\":\"quit\"}"
+    exit 0
+}
+
 process_cmd(){
     if [[ $# -lt 1 ]]; then
         echoerr "[process_cmd] no command"
@@ -139,16 +174,33 @@ process_cmd(){
     "REQUEST")
         _cmd_request "$@"
     ;;
+    "URL_SET")
+        _cmd_url_set "$1"
+    ;;
+    "URL_GET")
+        _cmd_url_get
+    ;;
     "QUIT")
-        exit 0
+        quit_cmd
     ;;
     *)
-        echoerr "[process_cmd] unkown command '${_CMD}'"
-        return 1;
+        echoerr "[process_cmd] unknown command '${_CMD}'"
+        return 4;
     ;;
     esac
 
     return 0
 }
 
-process_cmd $*
+
+
+
+if [ "${URL}" != "" ]; then
+    echo "{\"request\":\"set_url\", \"status\":\"done\", \"details\":\"${URL}\"}"
+fi
+trap 'quit_cmd' INT QUIT TERM;
+while read -r L_INPUT; do
+    process_cmd ${L_INPUT}
+done
+
+quit_cmd

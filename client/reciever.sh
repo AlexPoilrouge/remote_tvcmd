@@ -16,7 +16,7 @@ _py_from_get_value(){
         print(v);"
     RES=''
     if RES="$( python -c "${PYTHON_CODE}" )"; then
-        echo "${RES}"
+        echo "${RES}" | sed -e "s/'/\"/g"
         return 0
     else
         return 2
@@ -213,6 +213,56 @@ _resp_request_process(){
     return 0
 }
 
+_resp_get_url(){
+    if [[ $# -lt 2 ]]; then
+        echo "ERROR BAD-ANSWER"
+        return 1
+    fi
+
+    STATUS="$1"
+    DETAILS="$2"
+
+    case "${STATUS}" in
+    "error")
+        echo "GET_URL ERROR ${DETAILS}";
+    ;;
+    "found")
+        echo "GET_URL FOUND ${DETAILS}"
+    ;;
+    *)
+        echo "GET_URL UNKNOWN-STATUS";
+        return 2
+    ;;
+    esac
+
+    return 0
+}
+
+_resp_set_url(){
+    if [[ $# -lt 2 ]]; then
+        echo "ERROR BAD-ANSWER"
+        return 1
+    fi
+
+    STATUS="$1"
+    DETAILS="$2"
+
+    case "${STATUS}" in
+    "error")
+        echo "SET_URL ERROR ${DETAILS}";
+    ;;
+    "done")
+        echo "SET_URL SET ${DETAILS}"
+    ;;
+    *)
+        echo "SET_URL UNKNOWN-STATUS";
+        return 2
+    ;;
+    esac
+
+    return 0
+}
+
 _resp_tvcmd_process(){
     if [[ $# -lt 2 ]]; then
         echo "ERROR BAD-ANSWER"
@@ -314,6 +364,22 @@ process_answer(){
                 return 11
             fi
         ;;
+        "get_url")
+            if ! _resp_get_url "$( _py_from_get_value "${JSON_STRING}" status )" "$( _py_from_get_value "${JSON_STRING}" details )"; then
+                echoerr "_resp_get_url returned code $?"
+                return 12
+            fi
+        ;;
+        "set_url")
+            if ! _resp_set_url "$( _py_from_get_value "${JSON_STRING}" status )" "$( _py_from_get_value "${JSON_STRING}" details )"; then
+                echoerr "_resp_set_url returned code $?"
+                return 12
+            fi
+        ;;
+        "quit")
+            echo "QUIT"
+            exit 0
+        ;;
         *)
             return 3
         ;;
@@ -325,7 +391,7 @@ process_answer(){
     fi
 }
 
- trap 'echo "RECIEVER_TERMINATED"; exit 0'  INT QUIT TERM;
+trap 'echo "QUIT"; exit 0'  INT QUIT TERM;
 
 while read -r L_INPUT; do
     RET=""
