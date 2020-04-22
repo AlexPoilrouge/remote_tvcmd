@@ -37,14 +37,42 @@ _readyUser(){
     fi
 }
 
-_userAddShow(){
+_userRemoveShow(){
     if [[ "$#" -lt 2 ]]; then
         echo "fail"
+        return 1
     else
         _USER="$1"
         shift 1
         _RAW_SHOW="$*"
-        if [ "$( _readyUser "${_USER}")" = "ok" ]; then
+        if [ "$( _readyUser "${_USER}" )" = "ok" ]; then
+            _U_FILE="${CONFIG_DIR}/${_USER}/tvcmd/main.cfg"
+            _SHOW="$( echo "${_RAW_SHOW}" | sed -s 's/[[:space:]\.\-]/_/g' )"
+            _SHOW_LIST="$( < "${_U_FILE}" grep "shows" | sed -s 's/^shows = //g' )"
+            if [[  "${_SHOW_LIST}" =~ ((\,[[:space:]]*)|^)${_SHOW}(((\,)+)|$) ]]; then
+                < "${_U_FILE}" sed -s "s/${_SHOW}//" | sed "s/, ,/,/g"
+                "${TVCMD_BIN}" "${TVCMD_OPTION}" "update" > /dev/null
+            fi
+
+            echo "removed"
+        else
+            echo "error"
+            return 2
+        fi
+    fi
+
+    return 0
+}
+
+_userAddShow(){
+    if [[ "$#" -lt 2 ]]; then
+        echo "fail"
+        return 1
+    else
+        _USER="$1"
+        shift 1
+        _RAW_SHOW="$*"
+        if [ "$( _readyUser "${_USER}" )" = "ok" ]; then
             _U_FILE="${CONFIG_DIR}/${_USER}/tvcmd/main.cfg"
             _SHOW="$( echo "${_RAW_SHOW}" | sed -s 's/[[:space:]\.\-]/_/g' )"
             _SHOW_LIST="$( < "${_U_FILE}" grep "shows" | sed -s 's/^shows = //g' )"
@@ -56,14 +84,27 @@ _userAddShow(){
                 
                 export XDG_CONFIG_HOME="${CONFIG_DIR}/${_USER}"
                 export XDG_CACHE_HOME="${CONFIG_DIR}/${_USER}"
-                if ! ( ${TVCMD_BIN} ${TVCMD_OPTION} "update" ); then
+                _RES=''
+                if _RES="$( ${TVCMD_BIN} ${TVCMD_OPTION} "update" )" ; then
+                    if ( echo "${_RES}" | grep "${_SHOW} ... OK" ); then
+                        echo "${_RES}"
+                    else
+                        _userRemoveShow "${_USER}" "${_RAW_SHOW}" > /dev/null
+                        echo "not_found"
+                        return 3
+                    fi
+                else
                     echo "fail"
+                    return 4
                 fi
             fi
         else
             echo "error"
+            return 2
         fi
     fi
+
+    return 0
 }
 
 _userCommand(){
@@ -76,7 +117,7 @@ _userCommand(){
         if [ "$( _readyUser "${_USER}")" = "ok" ]; then
             export XDG_CONFIG_HOME="${CONFIG_DIR}/${_USER}"
             export XDG_CACHE_HOME="${CONFIG_DIR}/${_USER}"
-            ${TVCMD_BIN} ${TVCMD_OPTION} "$*"
+            yes | ${TVCMD_BIN} ${TVCMD_OPTION} "$*"
             return $?
         else
             echo "error"
@@ -103,7 +144,29 @@ TVCMD_processUserCommand(){
             else
                 _SHOW="$*"
 
-                _userAddShow "${_USER}" "${_SHOW}"
+                _RES=""
+                if  ! _RES="$( _userAddShow "${_USER}" "${_SHOW}" )"; then
+                    echo "${_RES}"
+                    return 6
+                else
+                    echo "${_RES}"
+                fi
+            fi
+        ;;
+        "RM_SHOW")
+            if [[ "$#" -lt 1 ]]; then
+                echo "no-show"
+                return 2
+            else
+                _SHOW="$*"
+
+                _RES=""
+                if  ! _RES="$( _userRemoveShow "${_USER}" "${_SHOW}" )"; then
+                    echo "${_RES}"
+                    return 7
+                else
+                    echo "${_RES}"
+                fi
             fi
         ;;
         "COMMAND")

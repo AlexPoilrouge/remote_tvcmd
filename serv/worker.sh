@@ -85,6 +85,7 @@ cmd_disconnect(){
 }
 
 cmd_request_process(){
+    echoerr "cmd_request_process $*"
     if [[ $# -lt 3 ]]; then
         echo "{\"request\":\"request\", \"status\":\"error\", \"details\":\"process_request: not enough parameters given\"}"
     else
@@ -117,7 +118,7 @@ cmd_request_process(){
                     if _RES="$( TVCMD_processUserCommand "${_USER}" $* )"; then
                         case "${_RES}" in
                         "present")
-                            echo "{\"request\":\"TVCMD\", \"status\":\"useless\", \"details\":\"'TVCMD_processUserCommand "${_USER}" "$*"': show already added\"}"
+                            echo "{\"request\":\"TVCMD\", \"status\":\"useless\", \"details\":\"'TVCMD_processUserCommand ${_USER} $*': show already added\"}"
                         ;;
                         *)
                             _RET="{\"request\":\"TVCMD\", \"status\":\"success\", \"details\":{"
@@ -130,22 +131,25 @@ cmd_request_process(){
                     else
                         case "${_RES}" in
                         "fail")
-                            echo "{\"request\":\"TVCMD\", \"status\":\"script-fail\", \"details\":\"'TVCMD_processUserCommand "${_USER}" "$*"': ${_RES}\"}"
+                            echo "{\"request\":\"TVCMD\", \"status\":\"script-fail\", \"details\":\"'TVCMD_processUserCommand ${_USER} $*': ${_RES}\"}"
                         ;;
                         "no-show")
-                            echo "{\"request\":\"TVCMD\", \"status\":\"no-show\", \"details\":\"'TVCMD_processUserCommand "${_USER}" "$*"': show not found/recognized\"}"
+                            echo "{\"request\":\"TVCMD\", \"status\":\"no-show\", \"details\":\"'TVCMD_processUserCommand ${_USER} $*': show not found/recognized\"}"
                         ;;
                         "no-cmd")
-                            echo "{\"request\":\"TVCMD\", \"status\":\"no-cmd\", \"details\":\"'TVCMD_processUserCommand "${_USER}" "$*"': tvcmd command not found/recognized\"}"
+                            echo "{\"request\":\"TVCMD\", \"status\":\"no-cmd\", \"details\":\"'TVCMD_processUserCommand ${_USER} $*': tvcmd command not found/recognized\"}"
                         ;;
                         "error")
-                            echo "{\"request\":\"TVCMD\", \"status\":\"error\", \"details\":\"'TVCMD_processUserCommand "${_USER}" "$*"' error: ${_RES}\"}"
+                            echo "{\"request\":\"TVCMD\", \"status\":\"error\", \"details\":\"'TVCMD_processUserCommand ${_USER} $*' error: ${_RES}\"}"
                         ;;
                         "bad-cmd")
-                            echo "{\"request\":\"TVCMD\", \"status\":\"invalid-cmd\", \"details\":\"'TVCMD_processUserCommand "${_USER}" "$*"' invalid: bad command\"}"
+                            echo "{\"request\":\"TVCMD\", \"status\":\"invalid-cmd\", \"details\":\"'TVCMD_processUserCommand ${_USER} $*' invalid: bad command\"}"
+                        ;;
+                        "not_found")
+                            echo "{\"request\":\"TVCMD\", \"status\":\"show-not-found\", \"details\":\"'TVCMD_processUserCommand ${_USER} $*' show not found…\"}"
                         ;;
                         *)
-                            echo "{\"request\":\"TVCMD\", \"status\":\"unknown-error\", \"details\":\"'TVCMD_processUserCommand "${_USER}" "$*"' unknown error: ${_RES}\"}"
+                            echo "{\"request\":\"TVCMD\", \"status\":\"unknown-error\", \"details\":\"'TVCMD_processUserCommand ${_USER} $*' unknown error: ${_RES}\"}"
                         ;;
                         esac
                     fi

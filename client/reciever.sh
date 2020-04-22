@@ -7,20 +7,46 @@ _py_from_get_value(){
     if [[ $# -lt 2 ]]; then
         return 1
     fi
-    JSON_STRING="$( echo "$1" | sed -e "s/\x1b\[.\{1,5\}m//g" )"
+    JSON_STRING="$( echo "$1" | sed -e "s/\x1b\[.\{1,5\}m//g" | sed -e "s/'/\\\\'/g" )"
     KEY="$2"
 
     PYTHON_CODE="import sys; import json; \
         data=json.loads('${JSON_STRING}'); \
         v= data[\"${KEY}\"] if \"${KEY}\" in data else ''; \
-        print(v);"
+        out= json.dumps(v); \
+        out= out[1:-1] if out[0]=='\"' and out[-1]=='\"' else out; \
+        print(out);"
     RES=''
     if RES="$( python -c "${PYTHON_CODE}" )"; then
-        echo "${RES}" | sed -e "s/'/\"/g"
+        echo "${RES}"
         return 0
     else
         return 2
     fi
+}
+
+_resp_send(){
+    if [[ $# -lt 2 ]]; then
+        echo "ERROR BAD-ANSWER"
+        return 1
+    fi
+
+    STATUS="$1"
+    DETAILS="$2"
+
+    case "${STATUS}" in
+    "fail")
+        echo "SEND FAILURE ${DETAILS}"
+    ;;
+    "success")
+    ;;
+    *)
+        echo "SEND UNKNOWN-STATUS";
+        return 2
+    ;;
+    esac
+
+    return 0
 }
 
 _resp_register(){
@@ -291,6 +317,9 @@ _resp_tvcmd_process(){
     "invalid-cmd")
         echo "TV_CMD INVALID-CMD ${DETAILS}";
     ;;
+    "show-not-found")
+        echo "TV_CMD SHOW-NOT-FOUND ${DETAILS}";
+    ;;
     "unknown-error")
         echo "TV_CMD UNKNOWN-ERROR ${DETAILS}";
     ;;
@@ -306,6 +335,11 @@ _resp_tvcmd_process(){
     return 0
 }
 
+quit_cmd(){
+    # echoerr "nah no"
+    exit 0
+}
+
 
 process_answer(){
     if [[ $# -lt 1 ]]; then
@@ -316,6 +350,12 @@ process_answer(){
     TYPE=""
     if TYPE="$( _py_from_get_value "${JSON_STRING}" request )"; then
         case "${TYPE}" in
+        "send")
+            if ! _resp_send "$( _py_from_get_value "${JSON_STRING}" status )" "$( _py_from_get_value "${JSON_STRING}" details )"; then
+                echoerr "_resp_send returned code $?"
+                return 14
+            fi
+        ;;
         "register")
             if ! _resp_register "$( _py_from_get_value "${JSON_STRING}" status )" "$( _py_from_get_value "${JSON_STRING}" details )"; then
                 echoerr "_resp_register returned code $?"
@@ -373,12 +413,12 @@ process_answer(){
         "set_url")
             if ! _resp_set_url "$( _py_from_get_value "${JSON_STRING}" status )" "$( _py_from_get_value "${JSON_STRING}" details )"; then
                 echoerr "_resp_set_url returned code $?"
-                return 12
+                return 13
             fi
         ;;
         "quit")
             echo "QUIT"
-            exit 0
+            return 0
         ;;
         *)
             return 3
@@ -391,13 +431,19 @@ process_answer(){
     fi
 }
 
-trap 'echo "QUIT"; exit 0'  INT QUIT TERM;
+trap 'quit_cmd' INT QUIT TERM;
 
 while read -r L_INPUT; do
     RET=""
     if ! RET="$( process_answer "${L_INPUT}" )"; then
         echo "ANWSER_READ ERROR ${RET}";
     else
-        echo "${RET}"
+        if [ "${RET}" = "QUIT" ]; then
+            quit_cmd
+        else
+            echo "${RET}"
+        fi
     fi
 done
+
+quit_cmd

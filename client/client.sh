@@ -1,5 +1,6 @@
 #!/bin/bash
 
+echoerr() { echo "$@" 1>&2; }
 
 SCRIPT_DIR="$( realpath "$( dirname "$0" )" )"
 
@@ -10,16 +11,12 @@ SENDER="${SCRIPT_DIR}/sender.sh"
 FIFO_PATH="${SCRIPT_DIR}/pipe"
 
 
-quit(){
-    rm -f "${FIFO_PATH}"
-
-    exit 0
-}
-
-trap 'quit_cmd' INT QUIT TERM;
+trap 'exit 0' INT QUIT TERM;
 
 mkfifo "${FIFO_PATH}" -m700
 
-( sleep 2; "${RECIEVER}" < "${FIFO_PATH}" ) | tee "${SCRIPT_DIR}/log_recieve.txt" | "${GUI}" | ( "${SENDER}" > "${FIFO_PATH}" )
+( "${RECIEVER}" < "${FIFO_PATH}" ) | tee "${SCRIPT_DIR}/log_recieve.txt" | "${GUI}" | ( "${SENDER}" > "${FIFO_PATH}" )
 
-quit
+rm -f "${FIFO_PATH}"
+
+exit 0

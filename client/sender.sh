@@ -7,6 +7,8 @@ URL_FILE="${SCRIPT_DIR}/url"
 
 URL="$( cat "${URL_FILE}" )"
 
+CURL_MAX_TIME="10"
+
 _send(){
     if [[ $# -lt 2 ]]; then
         echoerr "[send] need 'user' and 'request'"
@@ -39,10 +41,14 @@ _send(){
         fi
     done
 
-    if curl --silent --data "user=${_USER}" --data "request=${_REQUEST}" --data "pass=${_PASS}" --data "args=${_ARGS}" "${URL}"; then
+    echoerr "TODO : curl echo when fail (add timeout?) that could be processed ; also suppress show func on serv side, also to use when try to add invalid show…"
+        echoerr ">> curl --silent --max-time \"${CURL_MAX_TIME}\" --data \"user=${_USER}\" --data \"request=${_REQUEST}\" --data \"pass=${_PASS}\" --data \"args=${_ARGS}\" \"${URL}\""
+    if curl --silent --max-time "${CURL_MAX_TIME}" --data "user=${_USER}" --data "request=${_REQUEST}" --data "pass=${_PASS}" --data "args=${_ARGS}" "${URL}"; then
         return 0
     else
+        echo "{\"request\":\"send\", \"status\":\"fail\", \"details\":\"Could not connect to ${URL}\"}"
         echoerr "[send] curl failed"
+        echoerr ">>> curl --silent --max-time \"${CURL_MAX_TIME}\" --data \"user=${_USER}\" --data \"request=${_REQUEST}\" --data \"pass=${_PASS}\" --data \"args=${_ARGS}\" \"${URL}\""
         return 2
     fi
 }
@@ -147,6 +153,7 @@ _cmd_url_get(){
 
 quit_cmd(){
     echo "{\"request\":\"quit\"}"
+    # echoerr "ah"
     exit 0
 }
 

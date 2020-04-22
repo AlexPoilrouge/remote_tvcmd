@@ -63,10 +63,10 @@ class MyGUI(GObject.GObject) :
                     self._parent._onFilter= MyGUI.FILTER.ACQUIRED
                 else:
                     self._parent._onFilter= MyGUI.FILTER.ALL
-                self._parent._filterSearch(self._objects["ShowSearchEntry"].get_text())
+                self._parent._filterSearch()
 
         def onShowEntered(self, *args):
-            self._parent._filterSearch(args[0].get_text())
+            self._parent._filterSearch()
 
         def onShowAdd(self, *args):
             show= self._objects["ShowSearchEntry"].get_text()
@@ -86,6 +86,21 @@ class MyGUI(GObject.GObject) :
                 self._objects['EntryPasswordSet'].get_text() != '' and
                 self._objects['EntryPasswordConfirm'].get_text() == self._objects['EntryPasswordSet'].get_text()
             )
+
+        def onToolSetNew(self, *args):
+            sys.stderr.write("TODO onToolSetNew\n")
+            sys.stderr.flush()
+            self._parent.change_episode_selection_tag("new")
+
+        def onToolSetSee(self, *args):
+            sys.stderr.write("TODO onToolSetSee\n")
+            sys.stderr.flush()
+            self._parent.change_episode_selection_tag("see")
+
+        def onToolSetAcquire(self, *args):
+            sys.stderr.write("TODO onToolSetAcquire\n")
+            sys.stderr.flush()
+            self._parent.change_episode_selection_tag("acquire")
 
 
 
@@ -116,7 +131,8 @@ class MyGUI(GObject.GObject) :
                     'ErrorDialog', 'ValidDialog', 'URLDialog', 'RegisterDialog',
                     'NewToggle', 'UpcomingToggle', 'SeenToggle', 'AcquiredToggle', 'AllToggle',
                     'ShowSearchEntry', 'EntryURL', 'EntryUsername', 'EntryPasswordSet', 'EntryPasswordConfirm',
-                    'RegisterValidButton', 'ShowsTreeView', 'ShowsTreeStore'] :
+                    'RegisterValidButton',
+                    'ShowsTreeView', 'ShowsTreeStore', 'ShowTreeSelection'] :
             self.objects[name]= self.builder.get_object(name)
 
         self._handler= MyGUI.Handler(self, self.objects)
@@ -136,6 +152,7 @@ class MyGUI(GObject.GObject) :
         self.objects['EntryPass'].set_sensitive(True)
         self.objects['ConnectBtn'].set_sensitive(True)
         self._connected= True
+        self._filterSearch()
 
     def onConnectCancel(self):
         self.objects['Stack'].set_visible_child(self.objects['WaitConnectLabel'])
@@ -194,57 +211,103 @@ class MyGUI(GObject.GObject) :
 
         dial.hide()
 
-    def _filterSearch(self, showName):
-        txt= showName.lower().replace(' ','_')
+    def _filterSearch(self):
+        txt= self.objects["ShowSearchEntry"].get_text().lower().replace(' ','_')
+        txt= (txt+'*') if txt else ''
         user= self._connectedUser
         if (user) :
             if self._onFilter == MyGUI.FILTER.ALL :
-                printForPipe("REQUEST "+user+" TVCMD"+" COMMAND ls -sna "+txt+"*")
+                printForPipe("REQUEST "+user+" TVCMD"+" COMMAND ls -sna "+txt)
             elif self._onFilter == MyGUI.FILTER.NEW :
-                printForPipe("REQUEST "+user+" TVCMD"+" COMMAND ls -n "+txt+"*")
+                printForPipe("REQUEST "+user+" TVCMD"+" COMMAND ls -n "+txt)
             elif self._onFilter == MyGUI.FILTER.UPCOMING :
-                printForPipe("REQUEST "+user+" TVCMD"+" COMMAND ls -f "+txt+"*")
+                printForPipe("REQUEST "+user+" TVCMD"+" COMMAND ls -f "+txt)
             elif self._onFilter == MyGUI.FILTER.SEEN :
-                printForPipe("REQUEST "+user+" TVCMD"+" COMMAND ls -s "+txt+"*")
+                printForPipe("REQUEST "+user+" TVCMD"+" COMMAND ls -s "+txt)
             elif self._onFilter == MyGUI.FILTER.ACQUIRED:
-                printForPipe("REQUEST "+user+" TVCMD"+" COMMAND ls -a "+txt+"*")
+                printForPipe("REQUEST "+user+" TVCMD"+" COMMAND ls -a "+txt)
 
     def _processShowDB(self, show_db):
         treeStore= self.objects['ShowsTreeStore']
-        treeStore.clear()
         
         for show in show_db.keys() :
             showNode= treeStore.append(None,(show,None,None,None,None,None))
             for episode in show_db[show] :
                 treeStore.append(showNode,(None,episode[0],episode[1],episode[2],episode[3],episode[4],))
 
-    def processJSONShowList(self, data):
+    def processJSONAnswer(self, data):
         obj= json.loads(data)
         db= {}
         if obj :
-            if ("invoked" in obj) and (re.match("^\s*COMMAND\s+(ls)(\s+|(\s\S+))*$", obj['invoked'])) :
-                if 'line_count' in obj :
-                    l_count= obj['line_count']
-                    for i_l in range(1, (l_count+1)):
-                        line= obj["line"+str(i_l)]
-                        m= re.match("^\s*(\S+)\.s([0-9]{2})e([0-9]{2})\s+\:\s+\[\s+(\S+)\s+\]\s+\[\s+([0-9]{4}\-[0-9]{2}\-[0-9]{2})\s+\]\s\[\s+(.*)\s+\].*$",
-                                    line)
-                        if m:
-                            m= m.groups()
-                            show= m[0]
-                            #( season, episode, tag, date, name)
-                            ep= ((int(m[1])), (int(m[2])), m[3], m[4], m[5])
-                            if not show in db:
-                                db[show]= []
-                            db[show].append(ep)
-        print("=> "+str(db))
+            if ("invoked" in obj) :
+                if (re.match("^\s*COMMAND\s+(ls)(\s+|(\s\S+))*$", obj['invoked'])) :
+                    if 'line_count' in obj :
+                        self.objects['ShowsTreeStore'].clear()
+                        l_count= obj['line_count']
+                        for i_l in range(1, (l_count+1)):
+                            line= obj["line"+str(i_l)]
+                            m= re.match("^\s*(\S+)\.s([0-9]{2})e([0-9]{2})\s+\:\s+\[\s+(\S+)\s+\]\s+\[\s+([0-9]{4}\-[0-9]{2}\-[0-9]{2})\s+\]\s\[\s+(.*)\s+\].*$",
+                                        line)
+                            if m:
+                                m= m.groups()
+                                show= m[0]
+                                #( season, episode, tag, date, name)
+                                ep= ((int(m[1])), (int(m[2])), m[3], m[4], m[5])
+                                if not show in db:
+                                    db[show]= []
+                                db[show].append(ep)
+                else:
+                    res= re.match("^\s*ADD_SHOW\s+(\S)+\s*$", obj['invoked'])
+                    if res :
+                        added_show= res.groups()[0]
+                        l_count= obj['line_count']
+                        for i_l in range(1, (l_count+1)):
+                            line= obj["line"+str(i_l)]
+                            if re.match("^.*\s*("+added_show+")\s+\.\.\.\sOK.*$", line) :
+                                validDialog(added_show, "show added!")
+                                self._filterSearch()
+                        return
+                    res= re.match("^\s*RM_SHOW\s+(\S)+\s*$", obj['invoked'])
+                    if res :
+                        rm_show= res.groups()[0]
+                        validDialog(rm_show, "show removed!")
+                        self._filterSearch()
+                        return
+
+
         if len(db)>0 :
             self._processShowDB(db)
+
+    def change_episode_selection_tag(self, tag):
+        model, paths = self.objects["ShowTreeSelection"].get_selected_rows()
+        if model and paths:
+            shows= ""
+            for path in paths:
+                if path.get_depth() > 1 :
+                    iter= model.get_iter(path)
+                    show= model.get_value(model.iter_parent(iter),0)
+                    s= model.get_value(iter, 1)
+                    e= model.get_value(iter, 2)
+                    shows+= (show+'.s'+str(s).zfill(2)+'e'+str(e).zfill(2)+"* ")
+            
+            user= self._connectedUser
+            if shows and user:
+                printForPipe("REQUEST "+user+" TVCMD COMMAND "+tag+' '+shows)
+                self._filterSearch()
+
+
 
     def input_process(self, s):
         info= s.split(' ')
         _l= len(info)
         if _l<1 : return
+        elif info[0] == "SEND" :
+            if _l>1 :
+                status= info[1]
+                if (status == "FAILURE") :
+                    self.errorDialog("Connection failure", ' '.join(info[2:]))
+                else :
+                    self.errorDialog("Connection "+status)
         elif info[0] == "CONNECT" :
             if _l>1 :
                 status= info[1]
@@ -341,12 +404,10 @@ class MyGUI(GObject.GObject) :
                 elif (status == "NO-CMD") or (status == "INVALID-CMD"):
                     self.errorDialog('Bad command…', more)
                 elif (status == "SUCCESS" and more):
-                    self.processJSONShowList(more)
+                    self.processJSONAnswer(more)
                 else :
                     self.errorDialog('TVCmd: '+status, more)
         elif info[0] == "QUIT":
-            printForPipe("QUIT")
-            time.sleep(1)
             Gtk.main_quit()
 
                 
@@ -355,10 +416,19 @@ class MyGUI(GObject.GObject) :
 
 
 def inputThread_function(gui):
-    while True:
-        v= input()
-        GLib.idle_add(gui.input_process, v)
-        time.sleep(0.1)
+    b= True
+    while b:
+        try:
+            v= input()
+            if(v=="QUIT") :
+                b= False
+            else :
+                GLib.idle_add(gui.input_process, v)
+                time.sleep(0.1)
+        except EOFError as error:
+            b= False
+
+
 
 
 gui= MyGUI(HERE_PATH+"/gui.glade")
