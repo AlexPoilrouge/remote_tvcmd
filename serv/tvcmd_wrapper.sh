@@ -124,7 +124,7 @@ _userCommand(){
         if [ "$( _readyUser "${_USER}")" = "ok" ]; then
             export XDG_CONFIG_HOME="${CONFIG_DIR}/${_USER}"
             export XDG_CACHE_HOME="${CONFIG_DIR}/${_USER}"
-            yes | ${TVCMD_BIN} ${TVCMD_OPTION} "$*"
+            yes | ${TVCMD_BIN} ${TVCMD_OPTION} "$*" | sed -e "s/\x1b\[.\{1,5\}m//g"
             return $?
         else
             echo "error"
