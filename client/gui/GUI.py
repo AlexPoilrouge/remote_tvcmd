@@ -82,7 +82,7 @@ class MyGUI(GObject.GObject) :
 
 
         def onShowAdd(self, *args):
-            show= self._objects["ShowSearchEntry"].get_text().lower().replace(' ','_').replace('\'','')
+            show= self._objects["ShowSearchEntry"].get_text().lower().replace(' ','_').replace('\'','').replace('\:','')
             user= self._parent._connectedUser
             if show and user:
                 printForPipe("REQUEST "+user+" TVCMD"+" ADD_SHOW "+show)
@@ -295,8 +295,11 @@ class MyGUI(GObject.GObject) :
                         self.validDialog(rm_show, "show removed!")
                         self._filterSearch()
                         return
-
-
+                    res= re.match("^\s*COMMAND\s+(new|see|acquire|ignore)\s+(\S+)\s*$", obj['invoked'])
+                    if res :
+                        self._filterSearch()
+                        return
+                        
         if len(db)>0 :
             self._processShowDB(db)
 
