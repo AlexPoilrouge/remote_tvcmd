@@ -20,6 +20,12 @@ def printForPipe(arg):
     sys.stdout.flush()
     time.sleep(0.05)
 
+def printOnErr(arg) :
+    sys.stderr.write( arg )
+    sys.stderr.flush()
+    time.sleep(0.05)
+
+
 
 class MyGUI(GObject.GObject) :
     class Handler:
@@ -48,7 +54,7 @@ class MyGUI(GObject.GObject) :
         def onFilterToggled(self, *args):
             obj= args[0]
             if obj.get_active() :
-                for id in ['NewToggle', 'UpcomingToggle', 'SeenToggle', 'AcquiredToggle', 'AllToggle'] :
+                for id in ['NewToggle', 'UpcomingToggle', 'SeenToggle', 'AcquiredToggle', 'AllToggle', 'IgnoreToggle'] :
                     if self._objects[id] != obj :
                         self._objects[id].set_active(False)
 
@@ -61,6 +67,8 @@ class MyGUI(GObject.GObject) :
                     self._parent._onFilter= MyGUI.FILTER.SEEN
                 elif gladeName == "AcquiredToggle" :
                     self._parent._onFilter= MyGUI.FILTER.ACQUIRED
+                elif gladeName == "IgnoreToggle" :
+                    self._parent._onFilter= MyGUI.FILTER.IGNORED
                 else:
                     self._parent._onFilter= MyGUI.FILTER.ALL
                 self._parent._filterSearch()
@@ -68,8 +76,13 @@ class MyGUI(GObject.GObject) :
         def onShowEntered(self, *args):
             self._parent._filterSearch()
 
+        def onDeleteShowText(self, *args):
+            self._objects["ShowSearchEntry"].set_text('')
+            self._parent._filterSearch()
+
+
         def onShowAdd(self, *args):
-            show= self._objects["ShowSearchEntry"].get_text()
+            show= self._objects["ShowSearchEntry"].get_text().lower().replace(' ','_').replace('\'','')
             user= self._parent._connectedUser
             if show and user:
                 printForPipe("REQUEST "+user+" TVCMD"+" ADD_SHOW "+show)
@@ -88,19 +101,24 @@ class MyGUI(GObject.GObject) :
             )
 
         def onToolSetNew(self, *args):
-            sys.stderr.write("TODO onToolSetNew\n")
-            sys.stderr.flush()
             self._parent.change_episode_selection_tag("new")
 
         def onToolSetSee(self, *args):
-            sys.stderr.write("TODO onToolSetSee\n")
-            sys.stderr.flush()
             self._parent.change_episode_selection_tag("see")
 
         def onToolSetAcquire(self, *args):
-            sys.stderr.write("TODO onToolSetAcquire\n")
-            sys.stderr.flush()
             self._parent.change_episode_selection_tag("acquire")
+
+        def onToolSetIgnore(self, *args):
+            self._parent.change_episode_selection_tag("ignore")
+
+        def newTreeSelection(self, *args):
+            self._parent.check_selection()
+
+        def onDeleteSelectedShow(self, *args):
+            self._parent.selected_show_delete()
+
+        
 
 
 
@@ -111,6 +129,7 @@ class MyGUI(GObject.GObject) :
         UPCOMING=2
         SEEN=3
         ACQUIRED=4
+        IGNORED=5
 
 
 
@@ -129,10 +148,11 @@ class MyGUI(GObject.GObject) :
         
         for name in ['myWindow','EntryLogin','EntryPass','ConnectBtn','Stack','ShowsPage', 'WaitConnectLabel',
                     'ErrorDialog', 'ValidDialog', 'URLDialog', 'RegisterDialog',
-                    'NewToggle', 'UpcomingToggle', 'SeenToggle', 'AcquiredToggle', 'AllToggle',
+                    'NewToggle', 'UpcomingToggle', 'SeenToggle', 'AcquiredToggle', 'AllToggle', 'IgnoreToggle',
                     'ShowSearchEntry', 'EntryURL', 'EntryUsername', 'EntryPasswordSet', 'EntryPasswordConfirm',
                     'RegisterValidButton',
-                    'ShowsTreeView', 'ShowsTreeStore', 'ShowTreeSelection'] :
+                    'ShowsTreeView', 'ShowsTreeStore', 'ShowTreeSelection',
+                    'DeleteShowToolButton'] :
             self.objects[name]= self.builder.get_object(name)
 
         self._handler= MyGUI.Handler(self, self.objects)
@@ -212,8 +232,8 @@ class MyGUI(GObject.GObject) :
         dial.hide()
 
     def _filterSearch(self):
-        txt= self.objects["ShowSearchEntry"].get_text().lower().replace(' ','_')
-        txt= (txt+'*') if txt else ''
+        txt= self.objects["ShowSearchEntry"].get_text()
+        txt= ('*'+txt+'*') if txt else ''
         user= self._connectedUser
         if (user) :
             if self._onFilter == MyGUI.FILTER.ALL :
@@ -226,6 +246,8 @@ class MyGUI(GObject.GObject) :
                 printForPipe("REQUEST "+user+" TVCMD"+" COMMAND ls -s "+txt)
             elif self._onFilter == MyGUI.FILTER.ACQUIRED:
                 printForPipe("REQUEST "+user+" TVCMD"+" COMMAND ls -a "+txt)
+            elif self._onFilter == MyGUI.FILTER.IGNORED:
+                printForPipe("REQUEST "+user+" TVCMD"+" COMMAND ls -i "+txt)
 
     def _processShowDB(self, show_db):
         treeStore= self.objects['ShowsTreeStore']
@@ -257,20 +279,20 @@ class MyGUI(GObject.GObject) :
                                     db[show]= []
                                 db[show].append(ep)
                 else:
-                    res= re.match("^\s*ADD_SHOW\s+(\S)+\s*$", obj['invoked'])
+                    res= re.match("^\s*ADD_SHOW\s+(\S+)\s*$", obj['invoked'])
                     if res :
                         added_show= res.groups()[0]
                         l_count= obj['line_count']
                         for i_l in range(1, (l_count+1)):
                             line= obj["line"+str(i_l)]
                             if re.match("^.*\s*("+added_show+")\s+\.\.\.\sOK.*$", line) :
-                                validDialog(added_show, "show added!")
-                                self._filterSearch()
+                                self.validDialog(added_show, "show added!")
+                        self._filterSearch()
                         return
-                    res= re.match("^\s*RM_SHOW\s+(\S)+\s*$", obj['invoked'])
+                    res= re.match("^\s*RM_SHOW\s+(\S+)\s*$", obj['invoked'])
                     if res :
                         rm_show= res.groups()[0]
-                        validDialog(rm_show, "show removed!")
+                        self.validDialog(rm_show, "show removed!")
                         self._filterSearch()
                         return
 
@@ -293,7 +315,33 @@ class MyGUI(GObject.GObject) :
             user= self._connectedUser
             if shows and user:
                 printForPipe("REQUEST "+user+" TVCMD COMMAND "+tag+' '+shows)
-                self._filterSearch()
+
+    def check_selection(self):
+        selection= self.objects["ShowTreeSelection"]
+        model, paths= selection.get_selected_rows()
+
+        toolButton= self.objects['DeleteShowToolButton']
+        if model and paths and len(paths)==1 and paths[0].get_depth()==1 :
+            toolButton.set_visible(True)
+            toolButton.set_sensitive(True)
+        else :
+            toolButton.set_visible(False)
+            toolButton.set_sensitive(False)
+
+    def selected_show_delete(self):
+        selection= self.objects["ShowTreeSelection"]
+        model, paths= selection.get_selected_rows()
+
+        toolButton= self.objects['DeleteShowToolButton']
+        if model and paths and len(paths)==1 and paths[0].get_depth()==1 :
+            iter= model.get_iter(paths[0])
+            show= model.get_value(iter,0)
+
+            user= self._connectedUser
+            if show and user:
+                printForPipe("REQUEST "+user+" TVCMD RM_SHOW "+show)
+
+
 
 
 

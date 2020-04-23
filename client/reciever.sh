@@ -434,6 +434,7 @@ process_answer(){
 trap 'quit_cmd' INT QUIT TERM;
 
 while read -r L_INPUT; do
+# echoerr "> reading: $L_INPUT"
     RET=""
     if ! RET="$( process_answer "${L_INPUT}" )"; then
         echo "ANWSER_READ ERROR ${RET}";
