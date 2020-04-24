@@ -125,7 +125,7 @@ cmd_request_process(){
                             _LINES="$( echo "${_RES}" | ( _I=1; while read -r LINE; do echo -n "\"line${_I}\":\"${LINE}\", "; _I=$(( _I + 1 )); done; echo -n \"line_count\":$(( _I - 1 )) ) )"
                             _RET="${_RET}\"invoked\":\"$*\", ${_LINES}}}"
                             
-                            echo "${_RET}" | sed -e "s/\x1b\[.\{1,5\}m//g"
+                            echo "${_RET}" | sed -e 's/\x1B[@A-Z\\\]^_]\|\x1B\[[0-9:;<=>?]*[-!"#$%&'"'"'()*+,.\/]*[][\\@A-Z^_`a-z{|}~]//g'
                         ;;
                         esac
                     else

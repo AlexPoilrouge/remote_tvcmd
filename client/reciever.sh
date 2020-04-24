@@ -7,7 +7,7 @@ _py_from_get_value(){
     if [[ $# -lt 2 ]]; then
         return 1
     fi
-    JSON_STRING="$( echo "$1" | sed -e "s/\x1b\[.\{1,5\}m//g" | sed -e "s/'/\\\\'/g" )"
+    JSON_STRING="$( echo "$1" | sed -e 's/\x1B[@A-Z\\\]^_]\|\x1B\[[0-9:;<=>?]*[-!"#$%&'"'"'()*+,.\/]*[][\\@A-Z^_`a-z{|}~]//g' | sed -e "s/'/\\\\'/g" )"
     KEY="$2"
 
     PYTHON_CODE="import sys; import json; \
