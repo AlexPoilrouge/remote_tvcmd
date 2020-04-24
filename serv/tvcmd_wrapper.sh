@@ -73,7 +73,6 @@ _userAddShow(){
         _USER="$1"
         shift 1
         _RAW_SHOW="$*"
-        echo "d'acc" 1>&2;
         if [ "$( _readyUser "${_USER}" )" = "ok" ]; then
             _U_FILE="${CONFIG_DIR}/${_USER}/tvcmd/main.cfg"
             _SHOW="$( echo "${_RAW_SHOW}" | sed -s 's/[[:space:]\.\-]/_/g' )"
@@ -81,7 +80,6 @@ _userAddShow(){
             if [[  "${_SHOW_LIST}" =~ ((\,[[:space:]]*)|^)${_SHOW}(((\,)+)|$) ]]; then
                 echo "present"
             else
-                echo "lol" 1>&2;
                 _TMP="tmp$( date +%s ).file"
                 < "${_U_FILE}" sed -s "s/shows = ${_SHOW_LIST}/shows = ${_SHOW_LIST}\, ${_SHOW}/" > "${_TMP}" && mv "${_TMP}" "${_U_FILE}" && rm -rf "${_TMP}"
                 
@@ -89,17 +87,14 @@ _userAddShow(){
                 export XDG_CACHE_HOME="${CONFIG_DIR}/${_USER}"
                 _RES=''
                 if _RES="$( ${TVCMD_BIN} ${TVCMD_OPTION} "update" )" ; then
-                    echo "cheh" 1>&2;
                     if ( echo "${_RES}" | grep "${_SHOW} ... OK" ); then
                         echo "${_RES}"
                     else
-                        echo "fuuu" 1>&2;
                         _userRemoveShow "${_USER}" "${_RAW_SHOW}" > /dev/null
                         echo "not_found"
                         return 3
                     fi
                 else
-                    echo "sssad" 1>&2;
                     _userRemoveShow "${_USER}" "${_RAW_SHOW}" > /dev/null
                     echo "fail"
                     return 4

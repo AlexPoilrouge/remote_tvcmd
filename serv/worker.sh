@@ -1,10 +1,28 @@
 #!/bin/bash
 
 
-source utils.sh
-source tvcmd_wrapper.sh
+depend_check() {
+    for arg; do
+		hash "$arg" 2>/dev/null || { echo "{\"request\":\"process\", \"status\":\"error\", \"details\":\"script-fail: ${arg} missing\"}"; exit -1; }
+    done    
+}
+
+py3_package_check() {
+    for arg; do
+        python3 -c "import $arg" 2>/dev/null || { echo "{\"request\":\"process\", \"status\":\"error\", \"details\":\"script-fail: $arg missing python package."; exit -1; }
+    done
+}
 
 echoerr() { echo "$@" 1>&2; }
+
+
+depend_check "openssl"
+py3_package_check "json"
+
+
+
+source utils.sh
+source tvcmd_wrapper.sh
 
 
 cmd_register(){
