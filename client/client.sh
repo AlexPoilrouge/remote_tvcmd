@@ -39,7 +39,7 @@ trap 'exit 0' INT QUIT TERM;
 
 mkfifo "${FIFO_PATH}" -m700
 
-( "${RECIEVER}" < "${FIFO_PATH}" ) | tee "${SCRIPT_DIR}/log_recieve.txt" | "${GUI}" | tee "${SCRIPT_DIR}/log_gui.txt" | ( "${SENDER}"| tee "${SCRIPT_DIR}/log_send.txt" > "${FIFO_PATH}" )
+( "${RECIEVER}" < "${FIFO_PATH}" ) | tee "${SCRIPT_DIR}/log_recieve.txt" | "${GUI}" | ( "${SENDER}" > "${FIFO_PATH}" )
 
 rm -f "${FIFO_PATH}"
 
