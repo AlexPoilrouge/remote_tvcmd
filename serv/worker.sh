@@ -16,6 +16,7 @@ py3_package_check() {
 echoerr() { echo "$@" 1>&2; }
 
 
+depend_check "tvcmd"
 depend_check "openssl"
 py3_package_check "json"
 
