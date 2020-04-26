@@ -3,6 +3,13 @@
 Quick and dirty, unoptimized, and unsafe shell script wrap of [juantascon's tvcmd](https://github.com/juantascon/tvcmd) utility for deployment on a private server.
 
 
+#### Server-Client version
+
+This the main version: for a private server deployment.
+
+Check out the `local` branch of this repository for a single user desktop version.
+
+
 #### How
 
 ###### Server side
