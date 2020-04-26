@@ -38,19 +38,6 @@ class MyGUI(GObject.GObject) :
             time.sleep(1)
             Gtk.main_quit()
 
-        def onConnectBtnClick(self, *args):
-            if ( ( ( "EntryLogin" in self._objects and self._objects["EntryLogin"] ) and 
-            ( "EntryPass" in self._objects and self._objects["EntryPass"] ) ) and
-            ( self._objects["EntryLogin"].get_text() and self._objects["EntryPass"].get_text() ) ) :
-                if not self._parent._connected :
-                    self._parent._connectedUser= self._objects["EntryLogin"].get_text()
-                    printForPipe("LOGIN " + self._parent._connectedUser + " " + self._objects["EntryPass"].get_text() )
-                else :
-                    printForPipe("LOGOUT " + self._parent._connectedUser )
-                self._objects['EntryLogin'].set_sensitive(False)
-                self._objects['EntryPass'].set_sensitive(False)
-                self._objects['ConnectBtn'].set_sensitive(False)
-
         def onFilterToggled(self, *args):
             obj= args[0]
             if obj.get_active() :
@@ -83,22 +70,8 @@ class MyGUI(GObject.GObject) :
 
         def onShowAdd(self, *args):
             show= self._objects["ShowSearchEntry"].get_text().lower().replace(' ','_').replace('\'','').replace('\:','')
-            user= self._parent._connectedUser
-            if show and user:
-                printForPipe("REQUEST "+user+" TVCMD"+" ADD_SHOW "+show)
-
-        def onURL(self, *args):
-            printForPipe("URL_GET")
-
-        def onRegister(self, *args):
-            self._parent.registerDialog()
-
-        def registerEntryCtrl(self, *args):
-            self._objects["RegisterValidButton"].set_sensitive(
-                self._objects['EntryUsername'].get_text() != '' and
-                self._objects['EntryPasswordSet'].get_text() != '' and
-                self._objects['EntryPasswordConfirm'].get_text() == self._objects['EntryPasswordSet'].get_text()
-            )
+            if show:
+                printForPipe("REQUEST TVCMD ADD_SHOW "+show)
 
         def onToolSetNew(self, *args):
             self._parent.change_episode_selection_tag("new")
@@ -139,18 +112,14 @@ class MyGUI(GObject.GObject) :
         self.builder.add_from_file(gladFile)
         self.objects= {}
 
-        self._connected= False
-        self._connectedUser= None
-
         self._onFilter= MyGUI.FILTER.ALL
 
         self._url= None
         
-        for name in ['myWindow','EntryLogin','EntryPass','ConnectBtn','Stack','ShowsPage', 'WaitConnectLabel',
-                    'ErrorDialog', 'ValidDialog', 'URLDialog', 'RegisterDialog',
+        for name in ['myWindow','Stack','ShowsPage',
+                    'ErrorDialog', 'ValidDialog',
                     'NewToggle', 'UpcomingToggle', 'SeenToggle', 'AcquiredToggle', 'AllToggle', 'IgnoreToggle',
-                    'ShowSearchEntry', 'EntryURL', 'EntryUsername', 'EntryPasswordSet', 'EntryPasswordConfirm',
-                    'RegisterValidButton',
+                    'ShowSearchEntry',
                     'ShowsTreeView', 'ShowsTreeStore', 'ShowTreeSelection',
                     'DeleteShowToolButton'] :
             self.objects[name]= self.builder.get_object(name)
@@ -171,7 +140,6 @@ class MyGUI(GObject.GObject) :
         self.objects['EntryLogin'].set_sensitive(True)
         self.objects['EntryPass'].set_sensitive(True)
         self.objects['ConnectBtn'].set_sensitive(True)
-        self._connected= True
         self._filterSearch()
 
     def onConnectCancel(self):
@@ -180,8 +148,6 @@ class MyGUI(GObject.GObject) :
         self.objects['EntryLogin'].set_sensitive(True)
         self.objects['EntryPass'].set_sensitive(True)
         self.objects['ConnectBtn'].set_sensitive(True)
-        self._connected= False
-        self._connectedUser= None
 
     def _dialog(self, dialogID, status, info=None):
         dial= self.objects[dialogID]
@@ -200,54 +166,22 @@ class MyGUI(GObject.GObject) :
     def validDialog(self, status, info=None):
         self._dialog("ValidDialog", status, info)
 
-    def urlDialog(self, url=None):
-        dial= self.objects['URLDialog']
-        urlEntry= self.objects['EntryURL']
-
-        if url :
-            urlEntry.set_text(url)
-
-        response = dial.run()
-
-        if response == Gtk.ResponseType.OK and len(urlEntry.get_text())>0:
-            printForPipe("URL_SET "+urlEntry.get_text())            
-
-        dial.hide()
-
-    def registerDialog(self):
-        dial= self.objects['RegisterDialog']
-        userEntry= self.objects['EntryUsername']
-        pass1Entry= self.objects['EntryPasswordSet']
-        pass2Entry= self.objects['EntryPasswordConfirm']
-
-        userEntry.set_text('')
-        pass1Entry.set_text('')
-        pass2Entry.set_text('')
-
-        response = dial.run()
-
-        if response == Gtk.ResponseType.OK :
-            printForPipe("REGISTER "+userEntry.get_text()+' '+pass1Entry.get_text())            
-
-        dial.hide()
-
     def _filterSearch(self):
         txt= self.objects["ShowSearchEntry"].get_text()
         txt= ('*'+txt+'*') if txt else ''
-        user= self._connectedUser
-        if (user) :
-            if self._onFilter == MyGUI.FILTER.ALL :
-                printForPipe("REQUEST "+user+" TVCMD"+" COMMAND ls -sna "+txt)
-            elif self._onFilter == MyGUI.FILTER.NEW :
-                printForPipe("REQUEST "+user+" TVCMD"+" COMMAND ls -n "+txt)
-            elif self._onFilter == MyGUI.FILTER.UPCOMING :
-                printForPipe("REQUEST "+user+" TVCMD"+" COMMAND ls -f "+txt)
-            elif self._onFilter == MyGUI.FILTER.SEEN :
-                printForPipe("REQUEST "+user+" TVCMD"+" COMMAND ls -s "+txt)
-            elif self._onFilter == MyGUI.FILTER.ACQUIRED:
-                printForPipe("REQUEST "+user+" TVCMD"+" COMMAND ls -a "+txt)
-            elif self._onFilter == MyGUI.FILTER.IGNORED:
-                printForPipe("REQUEST "+user+" TVCMD"+" COMMAND ls -i "+txt)
+
+        if self._onFilter == MyGUI.FILTER.ALL :
+            printForPipe("REQUEST TVCMD COMMAND ls -sna "+txt)
+        elif self._onFilter == MyGUI.FILTER.NEW :
+            printForPipe("REQUEST TVCMD COMMAND ls -n "+txt)
+        elif self._onFilter == MyGUI.FILTER.UPCOMING :
+            printForPipe("REQUEST TVCMD COMMAND ls -f "+txt)
+        elif self._onFilter == MyGUI.FILTER.SEEN :
+            printForPipe("REQUEST TVCMD COMMAND ls -s "+txt)
+        elif self._onFilter == MyGUI.FILTER.ACQUIRED:
+            printForPipe("REQUEST TVCMD COMMAND ls -a "+txt)
+        elif self._onFilter == MyGUI.FILTER.IGNORED:
+            printForPipe("REQUEST TVCMD COMMAND ls -i "+txt)
 
     def _processShowDB(self, show_db):
         treeStore= self.objects['ShowsTreeStore']
@@ -315,9 +249,8 @@ class MyGUI(GObject.GObject) :
                     e= model.get_value(iter, 2)
                     shows+= (show+'.s'+str(s).zfill(2)+'e'+str(e).zfill(2)+"* ")
             
-            user= self._connectedUser
-            if shows and user:
-                printForPipe("REQUEST "+user+" TVCMD COMMAND "+tag+' '+shows)
+            if shows:
+                printForPipe("REQUEST TVCMD COMMAND "+tag+' '+shows)
 
     def check_selection(self):
         selection= self.objects["ShowTreeSelection"]
@@ -340,9 +273,8 @@ class MyGUI(GObject.GObject) :
             iter= model.get_iter(paths[0])
             show= model.get_value(iter,0)
 
-            user= self._connectedUser
-            if show and user:
-                printForPipe("REQUEST "+user+" TVCMD RM_SHOW "+show)
+            if show :
+                printForPipe("REQUEST TVCMD RM_SHOW "+show)
 
 
 
@@ -352,53 +284,6 @@ class MyGUI(GObject.GObject) :
         info= s.split(' ')
         _l= len(info)
         if _l<1 : return
-        elif info[0] == "SEND" :
-            if _l>1 :
-                status= info[1]
-                if (status == "FAILURE") :
-                    self.errorDialog("Connection failure", ' '.join(info[2:]))
-                else :
-                    self.errorDialog("Connection "+status)
-        elif info[0] == "CONNECT" :
-            if _l>1 :
-                status= info[1]
-                if (status == "CONNECTED") :
-                    self.onConnect()
-                else:
-                    self.onConnectCancel()
-                    if _l > 2 :
-                        self.errorDialog(status, ' '.join(info[2:]))
-                    else :
-                        self.errorDialog(status)
-        elif info[0] == "DISCONNECT" :
-            self.onConnectCancel()
-            if _l>1 and info[1] != "DISCONNECTED" :
-                if _l>2 :
-                    self.errorDialog(info[1], ' '.join(info[2:]))
-                else :
-                    self.errorDialog(info[1])
-        elif info[0] == "REGISTER" :
-            if _l>1 :
-                status= info[1]
-                if (status == "VALID") :
-                    self.validDialog('REGISTERATION','Success!')
-                elif (status == "UNAVAILABLE") :
-                    self.errorDialog(status,"Can't use this username…")
-                else:
-                    more= ' '.join(info[2:]) if _l>2 else None
-                    self.errorDialog('Register '+status, more)
-        elif info[0] == "CHANGE_PASS" :
-            if _l>1:
-                status= info[1]
-                if (status == "CHANGED") :
-                    self.validDialog('PASSWORD CHANGE','Success!')
-                    if self._connectedUser and len(self._connectedUser)>0 :
-                        printForPipe("LOGOUT "+self._connectedUser)
-                elif (status == "REFUSED"):
-                    self.errorDialog('PASSWORD CHANGE', "Failed (bad old password match?)")
-                else:
-                    more= ' '.join(info[2:]) if _l>2 else None
-                    self.errorDialog('Pass change '+status, more)
         elif info[0] == "REQUEST":
             if _l>1:
                 status= info[1]
@@ -417,7 +302,6 @@ class MyGUI(GObject.GObject) :
                     self.errorDialog(status, "You appear to have been disconnected")
                 else :
                     self.errorDialog('Request '+status, more)
-                self.onConnectCancel()
         elif info[0] == "PROCESS" or info[0] == "REQUEST_PROCESS":
             if _l>1:
                 status= info[1]
@@ -426,22 +310,6 @@ class MyGUI(GObject.GObject) :
                     self.errorDialog(('Server PROCESS' if info[0] == "PROCESS" else 'Request PROCESS ') , "Invalid or unknown connexion status")
                 else :
                     self.errorDialog(('Request ' if info[0] == "PROCESS" else 'Request processing ')+status, more)
-        elif info[0] == "GET_URL":
-            if _l>1:
-                status= info[1]
-                more= ' '.join(info[2:]) if _l>2 else None
-                if (status == "FOUND"):
-                    self.urlDialog(more)
-                else:
-                    self.errorDialog('Get URL '+status, more)
-        elif info[0] == "SET_URL":
-            if _l>2:
-                status= info[1]
-                more= ' '.join(info[2:])
-                if (status == "SET"):
-                    self._url= more
-                else:
-                    self.errorDialog('Set URL '+status, more)
         elif info[0] == "TV_CMD":
             if _l>1:
                 status= info[1]

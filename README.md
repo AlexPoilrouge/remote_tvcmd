@@ -3,16 +3,16 @@
 Quick and dirty, unoptimized, and unsafe shell script wrap of [juantascon's tvcmd](https://github.com/juantascon/tvcmd) utility for deployment on a private server.
 
 
+##### LOCAL BRANCH!!!
+
+This is the `local` branch. Merely a single user, desktop version.
+
+Checkout the `master` branch for multi-user server-client version.
+
+
 #### How
 
-###### Server side
-
-Basically, a php page executes a shell script that prints a JSON object according to the parameters that are obtain from POST requests on said php page.
-
-
-###### Client side
-
-A shell script connects and read the server's php page, obtains the JSON object as a response, which is processed and fed to a python GTK3 GUI which generates (according to user actions) new request to be send by the shell script to the server's  php page, and the loop repeats.
+A pipe loop between a shell-script invoking 'tvcmd' and a python GTK3 GUI.
 
 
 #### Disclaimer
