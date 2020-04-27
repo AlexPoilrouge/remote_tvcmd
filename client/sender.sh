@@ -3,7 +3,7 @@
 echoerr() { echo "$@" 1>&2; }
 
 SCRIPT_DIR="$( realpath "$( dirname "$0" )" )"
-URL_FILE="${SCRIPT_DIR}/url"
+URL_FILE="url"
 
 URL="$( cat "${URL_FILE}" )"
 
