@@ -432,6 +432,8 @@ class MyGUI(GObject.GObject) :
                 more= ' '.join(info[2:]) if _l>2 else None
                 if (status == "FOUND"):
                     self.urlDialog(more)
+                elif (status == "MISSING"):
+                    self.urlDialog()
                 else:
                     self.errorDialog('Get URL '+status, more)
         elif info[0] == "SET_URL":

@@ -255,6 +255,9 @@ _resp_get_url(){
     "found")
         echo "GET_URL FOUND ${DETAILS}"
     ;;
+    "missing")
+        echo "GET_URL MISSING ${DETAILS}"
+    ;;
     *)
         echo "GET_URL UNKNOWN-STATUS";
         return 2

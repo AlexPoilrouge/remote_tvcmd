@@ -144,6 +144,7 @@ _cmd_url_get(){
         echo "{\"request\":\"get_url\", \"status\":\"found\", \"details\":\"${URL}\"}"
     else
         echoerr "[cmd_url_get] not url set…"
+        echo "{\"request\":\"get_url\", \"status\":\"missing\", \"details\":\"no url found\"}"
         return 6
     fi
 }
