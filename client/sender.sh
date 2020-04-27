@@ -150,6 +150,7 @@ _cmd_url_get(){
 }
 
 quit_cmd(){
+    _cmd_logout "$@" > /dev/null
     echo "{\"request\":\"quit\"}"
     # echoerr "ah"
     exit 0
