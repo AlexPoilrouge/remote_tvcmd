@@ -24,7 +24,7 @@ A shell script connects and read the server's php page, obtains the JSON object 
 
 ###### Install
 
-To install the client side app use the script `client/install_client.sh` (`--system-install` with root privileges for system wide install)
+To install the client side app on desktop use the script `client/install_client.sh` (`--system` with root privileges for system wide install; `--uninstall` for uninstall)
 
 
 #### Disclaimer
