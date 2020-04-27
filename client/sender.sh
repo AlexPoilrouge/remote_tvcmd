@@ -150,8 +150,10 @@ _cmd_url_get(){
 }
 
 quit_cmd(){
+    if [[ $# -ge 1 ]]; then
+        _cmd_logout "$1" > /dev/null
+    fi
     echo "{\"request\":\"quit\"}"
-    # echoerr "ah"
     exit 0
 }
 

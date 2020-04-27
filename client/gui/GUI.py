@@ -34,7 +34,8 @@ class MyGUI(GObject.GObject) :
             self._objects= objects
 
         def onDestroy(self, *args):
-            printForPipe("QUIT")
+            _u= self._parent._connectedUser
+            printForPipe("QUIT"+((" "+str(_u)) if _u else ""))
             time.sleep(1)
             Gtk.main_quit()
 
