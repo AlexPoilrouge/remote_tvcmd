@@ -1,21 +1,19 @@
 #!/bin/bash
 
 
+echoerr() { echo "$@" 1>&2; }
+
 depend_check() {
     for arg; do
-		hash "$arg" 2>/dev/null || { echo "Error: Could not find \"$arg\" application."; exit -1; }
+		hash "$arg" 2>/dev/null || { echoerr "Error: Could not find \"$arg\" application."; exit 255; }
     done    
 }
 
 py3_package_check() {
     for arg; do
-        python3 -c "import $arg" 2>/dev/null || { echo "Error: Could not find \"$arg\" python package."; exit -1; }
+        python3 -c "import $arg" 2>/dev/null || { echoerr "Error: Could not find \"$arg\" python package."; exit 255; }
     done
 }
-
-echoerr() { echo "$@" 1>&2; }
-
-
 
 
 depend_check "python3"
@@ -31,7 +29,17 @@ SCRIPT_DIR="$( realpath "$( dirname "$0" )" )"
 GUI="${SCRIPT_DIR}/GUI.py"
 WORKER="${SCRIPT_DIR}/worker.sh"
 
-FIFO_PATH="${SCRIPT_DIR}/pipe"
+FIFO_PATH="pipe"
+
+WORK_DIR="${HOME}/.remote_tvcmd"
+
+
+if [ ! -d "${WORK_DIR}" ] && ! ( mkdir -p "${HOME}/.remote_tvcmd" ); then
+    echoerr "Can't found nor create work dir ${WORK_DIR}…"
+    exit 1
+fi
+
+cd "${WORK_DIR}" || ( echoerr "couldn't access work directory ${WORK_DIR}…"; exit 2)
 
 
 trap 'exit 0' INT QUIT TERM;

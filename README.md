@@ -15,6 +15,11 @@ Checkout the `master` branch for multi-user server-client version.
 A pipe loop between a shell-script invoking 'tvcmd' and a python GTK3 GUI.
 
 
+###### Install
+
+To install the client side app on desktop use the script `client/install_client.sh` (`--system` with root privileges for system wide install; `--uninstall` for uninstall)
+
+
 #### Disclaimer
 
 Made for personal use. Download, execute, install or copy at your own risks.
