@@ -42,7 +42,8 @@ class MyGUI(GObject.GObject) :
         def onConnectBtnClick(self, *args):
             if ( ( ( "EntryLogin" in self._objects and self._objects["EntryLogin"] ) and 
             ( "EntryPass" in self._objects and self._objects["EntryPass"] ) ) and
-            ( self._objects["EntryLogin"].get_text() and self._objects["EntryPass"].get_text() ) ) :
+            ( self._objects["EntryLogin"].get_text() and
+            ( self._objects["EntryPass"].get_text() or not not self._parent._connected) ) ) :
                 if not self._parent._connected :
                     self._parent._connectedUser= self._objects["EntryLogin"].get_text()
                     printForPipe("LOGIN " + self._parent._connectedUser + " " + self._objects["EntryPass"].get_text() )
@@ -51,6 +52,7 @@ class MyGUI(GObject.GObject) :
                 self._objects['EntryLogin'].set_sensitive(False)
                 self._objects['EntryPass'].set_sensitive(False)
                 self._objects['ConnectBtn'].set_sensitive(False)
+                self._objects["EntryPass"].set_text('')
 
         def onFilterToggled(self, *args):
             obj= args[0]
