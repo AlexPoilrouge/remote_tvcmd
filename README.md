@@ -21,6 +21,8 @@ Basically, a php page executes a shell script that prints a JSON object accordin
 
 A shell script connects and read the server's php page, obtains the JSON object as a response, which is processed and fed to a python GTK3 GUI which generates (according to user actions) new request to be send by the shell script to the server's  php page, and the loop repeats.
 
+<img src="screenshot.png" width=200/>
+ 
 
 ###### Install
 
