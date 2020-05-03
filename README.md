@@ -14,6 +14,8 @@ Checkout the `master` branch for multi-user server-client version.
 
 A pipe loop between a shell-script invoking 'tvcmd' and a python GTK3 GUI.
 
+<img src="screenshot.png" width=200/>
+ 
 
 ###### Install
 
