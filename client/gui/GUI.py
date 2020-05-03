@@ -263,9 +263,11 @@ class MyGUI(GObject.GObject) :
     def processJSONAnswer(self, data):
         obj= json.loads(data)
         db= {}
+        update= False
         if obj :
             if ("invoked" in obj) :
                 if (re.match("^\s*COMMAND\s+(ls)(\s+|(\s\S+))*$", obj['invoked'])) :
+                    update= True
                     if 'line_count' in obj :
                         self.objects['ShowsTreeStore'].clear()
                         l_count= obj['line_count']
@@ -298,12 +300,12 @@ class MyGUI(GObject.GObject) :
                         self.validDialog(rm_show, "show removed!")
                         self._filterSearch()
                         return
-                    res= re.match("^\s*COMMAND\s+(new|see|acquire|ignore)\s+(\S+)\s*$", obj['invoked'])
+                    res= re.match("^\s*COMMAND\s+(new|see|acquire|ignore)(\s+(\S+))+\s*$", obj['invoked'])
                     if res :
                         self._filterSearch()
                         return
                         
-        if len(db)>0 :
+        if len(db)>0 or update :
             self._processShowDB(db)
 
     def change_episode_selection_tag(self, tag):
