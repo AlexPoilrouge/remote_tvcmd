@@ -65,7 +65,8 @@ _userCommand(){
         echo "fail"
         return 1
     else
-        yes | ${TVCMD_BIN} ${TVCMD_OPTION} "$*" | sed -e 's/\x1B[@A-Z\\\]^_]\|\x1B\[[0-9:;<=>?]*[-!"#$%&'"'"'()*+,.\/]*[][\\@A-Z^_`a-z{|}~]//g'
+        yes | ${TVCMD_BIN} ${TVCMD_OPTION} "$*" | sed -e 's/\x1B[@A-Z\\\]^_]\|\x1B\[[0-9:;<=>?]*[-!"#$%&'"'"'()*+,.\/]*[][\\@A-Z^_`a-z{|}~]//g' \
+                | sed -e "s/\"/''/g"
         return $?
     fi
 }
